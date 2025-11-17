@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Scenario 1: Monitor container's own resources
+  monitor-container:
+    build: .
+    container_name: resource-monitor-container
+    environment:
+      - MONITOR_MODE=container
+      - MONITOR_INTERVAL=5
+      - PING_HOST=8.8.8.8
+      - LOG_DIR=/var/log/monitor
+      - CONSOLE_OUTPUT=true
+    volumes:
+      # Mount log directory to host for persistence
+      - ./logs/container:/var/log/monitor
+    restart: unless-stopped
+
+  # Scenario 2: Monitor HOST resources from within container
+  monitor-host:
+    build: .
+    container_name: resource-monitor-host
+    environment:
+      - MONITOR_MODE=host
+      - MONITOR_INTERVAL=5
+      - PING_HOST=8.8.8.8
+      - LOG_DIR=/var/log/monitor
+      - CONSOLE_OUTPUT=true
+    volumes:
+      # Mount log directory to host for persistence
+      - ./logs/host:/var/log/monitor
+      # Mount host's proc, sys, and other necessary filesystems
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc:/host/etc:ro
+    restart: unless-stopped
+    # Use host's PID namespace to see host processes
+    pid: host
+    # Use host's network stack for accurate network monitoring
+    network_mode: host
+    # Grant additional capabilities for system monitoring
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    # Run in privileged mode for full host access (use with caution)
+    privileged: true
